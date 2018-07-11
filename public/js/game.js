@@ -844,7 +844,7 @@ function setSounds(){
     //this.tweens.killAll();  //Stops all Tweens NOT finished!
 
     //Sound INI
-    musicSound.play('',{
+    musicSound.play('',{    //After GameOver the sound is in a Tween!
       rate: 1,
       delay: 2
     });
