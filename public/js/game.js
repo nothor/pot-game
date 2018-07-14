@@ -458,7 +458,7 @@ function checkMovement(){
     rat.setVelocityX(0);
   }
 
-  if(this.cursors.up.isDown && (rat.y == HEIGHT-64)) {
+  if((rat.y == HEIGHT-64) && (this.cursors.up.isDown || (gamepad && gamepad.X))) {
     console.log(rat.body.touching);
     rat.setVelocityY(-400);
   }
