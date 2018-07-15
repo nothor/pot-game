@@ -1,8 +1,12 @@
 # pot-game
 A Game made in Phaser 3
 
-PREREQUISITES
-*************
+DEMO
+****
+https://pot-game.herokuapp.com/
+
+PREREQUISITES (Play Locally)
+****************************
 1) Install Node.js in your computer
 
 OPTIONAL: If you don't download the node-modules
@@ -11,8 +15,8 @@ $ npm init -f
 $ npm install --save express
 $ npm install --save socket.io
 
-EXECUTE
-*******
+EXECUTE (Play Locally)
+**********************
 Run the following command inside the "Root Server" folder in order to execute the game as a server
 $ node server.js
 
