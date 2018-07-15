@@ -458,8 +458,8 @@ function checkMovement(){
     rat.setVelocityX(0);
   }
 
-  if((rat.y == HEIGHT-64) && (this.cursors.up.isDown || (gamepad && gamepad.X))) {
-    console.log(rat.body.touching);
+  //If we are touching the Bottom of the screen, we can jump
+  if((rat.body.blocked.down) && (this.cursors.up.isDown || (gamepad && gamepad.X))) {  //Check Bottom rat.y == HEIGHT-64
     rat.setVelocityY(-400);
   }
 
