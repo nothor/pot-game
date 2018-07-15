@@ -2,6 +2,10 @@ var express = require('express');
 var app = express();
 var server = require('http').Server(app);
 var io = require('socket.io').listen(server);
+
+// set the port of our application
+// process.env.PORT lets the port be set by Heroku
+var port = process.env.PORT || 8081;
  
 app.use(express.static(__dirname + '/public'));
 
@@ -19,6 +23,6 @@ io.on('connection', function (socket) {
 });
 
 //Ejecutamos el servidor escuchando en el puerto 8081
-server.listen(8081, function () {
+server.listen(port, function () {
   console.log(`Listening on ${server.address().port}`);
 });
