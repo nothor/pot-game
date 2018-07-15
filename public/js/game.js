@@ -4,27 +4,35 @@
 const WIDTH = 800;  //this.cameras.main.width;
 const HEIGHT = 600; //this.cameras.main.width;
 const soupTint = 0xdfff80;  //https://www.w3schools.com/colors/colors_picker.asp
+const delayFire = 200;  //Delay between fired bullets
+const delayItems = 500;
+
 //Ini Game Values
 var gameLevel = 1;  //we set the numberScreenItems and numberReceptItems depending on it.
 var numberReceptItems = 2; //Recept, depending on the Level
 var MaxSameItems = 2; //Max Number Items per Ingredient in Recept
 var numberScreenItems = 2*numberReceptItems; //Simultaneous, depending on the Level
 var levelReady = true;
+var lastFired = 0;
 
 var weapon;
 var rat;
 var pot;
 var potSides;
 var water;
-var gamepad;
-var debugText;
-var lastFired = 0;
-const delayFire = 200;  //Delay between fired bullets
-const delayItems = 500;
-var spaceLaunch;
-var spaceInGame;
-var spaceInPot;
+var ingredients;  //ingredients in Screen
+var receptItems;  //The recept of the Level
 var bullets;
+
+//Input
+var gamepad;
+
+//Helpers
+var spaceLaunch;  //From where the Ingredients are Launched
+var spaceInGame;  //InGame Zone
+var spaceInPot;   //Zone to detect a Ingredient inside the Pot.
+var levelFrames = [];   //Available frames to choose per level
+var receptItemsArray = [];  //Helper for ReceptItems Container
 
 //Particles
 var dropSplash;
@@ -41,17 +49,13 @@ var wrongItemFX;
 var rightItemFX;
 var completeFX;
 
-
-//To Ini
-var ingredients;  //ingredients in Screen
-var levelFrames = [];   //Available frames to choose per level
-var receptItemsArray = [];
-var receptItems;
-
-//For debugging      
+//Texts
 var lifeLeft;
 var rightTopText;
 var centerText;
+
+//For debugging  
+var debugText;    
 
   var Bullet = new Phaser.Class({
 
