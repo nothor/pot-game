@@ -26,6 +26,7 @@ var bullets;
 
 //Input
 var gamepad;
+var touchpoint = null; //vector where we have touch (for smartphone)
 
 //Helpers
 var spaceLaunch;  //From where the Ingredients are Launched
@@ -50,11 +51,12 @@ var rightItemFX;
 var completeFX;
 
 //Texts
-var lifeLeft;
+var lifeLeft = 5;
 var rightTopText;
 var centerText;
 
 //For debugging  
+const DEBUG = false;
 var debugText;    
 
   var Bullet = new Phaser.Class({
@@ -194,10 +196,6 @@ class InGame extends Phaser.Scene {
     //var graphics = this.add.graphics();
     //graphics.strokeRect((WIDTH-pot.body.width)/2, HEIGHT-32, pot.body.width, 32).setDepth(5);
 
-    //Control de Teclado
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.keyFire = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);  //keyboard.addKeys('W,S,A,D')
-
     //SET Animations
     setAnimations.call(this);
 
@@ -210,6 +208,12 @@ class InGame extends Phaser.Scene {
     //SET Particles
     setParticles.call(this);
 
+    //SET Controls
+    //Cursors
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.keyFire = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);  //keyboard.addKeys('W,S,A,D')
+
+    //Gamepad
     this.input.gamepad.on('down', function (pad, button, index) {
       if (pad.getAxisTotal() < 4) {
       }
@@ -219,21 +223,34 @@ class InGame extends Phaser.Scene {
       }
     }, this);
 
+    //Mouse
+    this.input.on('pointerdown', function (pointer) {
+      touchpoint = new Phaser.Math.Vector2(pointer.x, pointer.y);   //touchpoint.set(pointer.x, pointer.y);
+    }, this);
+
+    this.input.on('pointerup', function (pointer) {
+      rat.fire = true;
+    }, this);
+
+
     debugText = this.add.text(WIDTH-100, HEIGHT-100, '', { font: '16px Courier', fill: '#00ff00' });
   }
    
   update(time) {
 
-    /*
-    debugText.setText([
-      'Level ' + gameLevel,
-      rat.state,
-      rat.body.velocity.x,
-      rat.body.angularVelocity
-      //gamepad.leftStick.x,
-      //gamepad.rightStick.x
-    ]);
-    */
+    if(DEBUG){
+      debugText.setText([
+        //'Level ' + gameLevel,
+        rat.state,
+        //rat.body.velocity.x,
+        //rat.body.angularVelocity,
+        rat.x,
+        rat.body.x,
+        //touchpoint.x
+        //gamepad.leftStick.x,
+        //gamepad.rightStick.x
+      ]);
+    }
 
     if(lifeLeft > 0){
       //Check Movement
@@ -247,7 +264,7 @@ class InGame extends Phaser.Scene {
     updateAnimation();
 
     //Check Next Level
-    if(levelReady && ((gamepad && gamepad.B)|| this.keyFire.isDown)){
+    if(levelReady && rat.fire){
       levelReady = false;
       iniLevel.call(this);
     }
@@ -272,22 +289,10 @@ class UIScene extends Phaser.Scene {
       //Convert Recept to Images
       receptItems = this.add.group(); 
 
-      rightTopText = this.add.bitmapText(WIDTH-200, 10, 'gem', 'Press Fire');
+      rightTopText = this.add.bitmapText(WIDTH-96, 16+10, 'gem', 'Press Fire');
+      rightTopText.setOrigin(0.5);
       centerText = this.add.bitmapText(WIDTH/2, HEIGHT/2, 'gem', '');
-      centerText.setScale(2).setVisible(false);
-
-      /*
-      rightTopText.alpha=0;
-      this.tweens.add({
-        targets: rightTopText,
-        alpha: 1,
-        duration: 200,
-        ease: 'Power2',
-        repeat: -1,
-        yoyo: true,
-        hold: 1000
-      });
-      */
+      centerText.setScale(2).setVisible(false); //.setOrigin(0.25, 0.5)
 
       //  Grab a reference to the Game Scene
       let ourGame = this.scene.get('InGame');
@@ -320,13 +325,13 @@ class LoadScene extends Phaser.Scene {
     var progressBar = this.add.graphics();
     var progressBox = this.add.graphics();
     progressBox.fillStyle(0x222222, 0.8);
-    progressBox.fillRect(240, 270, 320, 50);
+    progressBox.fillRect(WIDTH/4-10, HEIGHT/2 - 10, WIDTH/2+20, 30+20);  //fillRect(x, y, width, height)
 
     this.load.on('progress', function (value) {
       progressBar.clear();
       progressBar.fillStyle(0xffffff, 1);
       //progressBar.fillRect(0, 270, 800 * value, 60);
-      progressBar.fillRect(250, 280, 300 * value, 30);
+      progressBar.fillRect(WIDTH/4, HEIGHT/2, value * WIDTH/2, 30);
     });
 
     this.load.on('complete', function () {
@@ -375,15 +380,15 @@ var config = {
   type: Phaser.AUTO,
   parent: 'phaser-example',
   pixelArt: true, //scale is NOT interpolated
-  width: 800,
-  height: 600,
+  width: WIDTH,
+  height: HEIGHT,
   input: {
     gamepad: true //Important to use the Gamepad!!
   },
   physics: {
     default: 'arcade',
     arcade: {
-      debug: false,
+      debug: DEBUG,
       gravity: { y: 200 }
     }
   },
@@ -452,13 +457,10 @@ function setColliders(){
 function checkMovement(){
   //Check Keyboard
   if (this.cursors.left.isDown) {
-    //rat.setAngularVelocity(-300);
     rat.setVelocityX(-300);
   } else if (this.cursors.right.isDown){
-    //rat.setAngularVelocity(300);
     rat.setVelocityX(300);
   } else if (this.cursors.left.isUp || this.cursors.right.isUp) {
-    //rat.setAngularVelocity(0);
     rat.setVelocityX(0);
   }
 
@@ -473,11 +475,31 @@ function checkMovement(){
     rat.setVelocityX(300 * gamepad.leftStick.x);
     rat.setAngularVelocity(300 * gamepad.rightStick.x);   //We can change the Angle! :)
   }
+
+  //Check Touchpoint  --> Still to debug
+  if(touchpoint) {
+    if(rat.x < (touchpoint.x - rat.width/8)){ //Move to the Right
+      rat.setVelocityX(300);
+      rat.fire = false;
+    } else if(rat.x > (touchpoint.x + rat.width/8)){ //Move to the Left
+      rat.setVelocityX(-300);
+      rat.fire = false;     //If we are moving, we consider we didn't want to fire
+    } else{
+      rat.setVelocityX(0);
+      //nothing to do
+    }
+  }
 }
 
 function checkFire(time){
+  //Better define a Fire Variable
+
   if (time > lastFired){
     if((gamepad && gamepad.A) || this.keyFire.isDown){
+      rat.fire = true;
+    }
+    if(rat.fire && !levelReady){
+      rat.fire = false;
       var bullet = bullets.get(); //https://photonstorm.github.io/phaser3-docs/Phaser.GameObjects.Group.html#get__anchor
       if (bullet){
           swingHighFX.play();
@@ -770,7 +792,7 @@ function setSounds(){
 
     for (let i=0; i<receptItemsArray.length; i++){
       let container = this.add.container(0, 0);
-      container.add(this.add.image(32 , 25, 'fruits', receptItemsArray[i].frame));
+      container.add(this.add.image(32 , 16+10, 'fruits', receptItemsArray[i].frame));
       container.add(this.add.bitmapText(32+16, 10, 'gem', 'x' + receptItemsArray[i].number));
       receptItems.add(container);
     }
@@ -886,15 +908,16 @@ function setSounds(){
     centerText.setOrigin(0.25, 0.5).setVisible(true);
 
     this.tweens.add({
+      //Bug depending on the WIDTH!!
       targets: receptItems.getChildren(),
       x: { value: {
         getEnd: function (target, key, value){
-          return target.x*scale + spaceStepX/2; 
+          return spaceStepX/2 + target.x*scale;   //Revisar
         }
       }, duration: showItemsTime, ease: 'Power2' },            //Power1, Power2, Bounce.easeOut
       y: { value: {
         getEnd: function (target, key, value){
-          return target.y + HEIGHT/4;
+          return HEIGHT/4 - target.y;
         }
       }, duration: showItemsTime, ease: 'Power2' },
       scaleX: { value: scale, duration: showItemsTime, ease: 'Power2' },
@@ -911,7 +934,6 @@ function setSounds(){
 
   function nextLevel(){
     //https://labs.phaser.io/edit.html?src=src/physics/arcade/restart%20physics%20scene.js
-    //rightTopText.setText('Recept Complete!');
 
     //Sound
     soundFadeOut.call(this, boilingFX, 2000)
