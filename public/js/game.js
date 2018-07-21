@@ -1,8 +1,9 @@
 //Ejemplo de aparecer y desaparecer objetos
 //https://labs.phaser.io/edit.html?src=src/game%20objects/group/sprite%20pool.js
 
-const WIDTH = 800;  //this.cameras.main.width;
-const HEIGHT = 600; //this.cameras.main.width;
+var screenSize = setScreenSize();
+const WIDTH = screenSize.w;  //this.cameras.main.width;
+const HEIGHT = screenSize.h; //this.cameras.main.width;
 const soupTint = 0xdfff80;  //https://www.w3schools.com/colors/colors_picker.asp
 const delayFire = 200;  //Delay between fired bullets
 const delayItems = 500;
@@ -15,7 +16,7 @@ var numberScreenItems = 2*numberReceptItems; //Simultaneous, depending on the Le
 var levelReady = true;
 var lastFired = 0;
 
-var weapon;
+var background;
 var rat;
 var pot;
 var potSides;
@@ -396,7 +397,14 @@ function createInGameObjects(){
     runChildUpdate: true  //Execute during the update, the update function of the Childs
   });
 
-  this.add.tileSprite(WIDTH/2, HEIGHT/2, WIDTH, HEIGHT, 'background');
+  //this.add.tileSprite(WIDTH/2, HEIGHT/2, WIDTH, HEIGHT, 'background');  //With tileSprite, the pattern is repeated.
+  background = this.add.sprite(WIDTH/2, HEIGHT/2, 'background')
+  if((WIDTH - background.width > HEIGHT - background.height) && (WIDTH - background.width > 0)){
+    background.setScale(WIDTH/background.width);
+  }
+  else if((HEIGHT - background.height > WIDTH - background.width) && (HEIGHT - background.height > 0)){
+    background.setScale(HEIGHT/background.height); 
+  }
 
   //We add pot as Static!
   pot = this.physics.add.staticImage(WIDTH/2, HEIGHT, 'pot').setDepth(1);  //Not important the position
@@ -1015,6 +1023,23 @@ function setSounds(){
       yoyo: true
       //repeatDelay: 500
     });
+  }
+
+  function setScreenSize(maxSide = 800){  
+    //Get the width/height of screen
+    var w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+    var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+    var ratio = w/h;
+    if(ratio>1)
+      screenSize = { w: maxSide, h: maxSide/ratio};
+    else
+      screenSize = { w: maxSide*ratio, h: maxSide};
+    
+    //the minHeight should be 600 in order to be playable
+    if(screenSize.h < 600)
+      screenSize.h = 600;
+
+    return screenSize;
   }
 
   //HELPER
