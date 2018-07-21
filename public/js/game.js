@@ -208,32 +208,11 @@ class InGame extends Phaser.Scene {
     //SET Particles
     setParticles.call(this);
 
-    //SET Controls
-    //Cursors
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.keyFire = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);  //keyboard.addKeys('W,S,A,D')
+    //SET Inputs
+    this.cursors = this.input.keyboard.createCursorKeys();  //those are not considered listeners.
+    startInputEvents.call(this);
 
-    //Gamepad
-    this.input.gamepad.on('down', function (pad, button, index) {
-      if (pad.getAxisTotal() < 4) {
-      }
-      else {
-          pad.setAxisThreshold(0.3);
-          gamepad = pad;
-      }
-    }, this);
-
-    //Mouse
-    this.input.on('pointerdown', function (pointer) {
-      touchpoint = new Phaser.Math.Vector2(pointer.x, pointer.y);   //touchpoint.set(pointer.x, pointer.y);
-    }, this);
-
-    this.input.on('pointerup', function (pointer) {
-      rat.fire = true;
-    }, this);
-
-
-    debugText = this.add.text(WIDTH-100, HEIGHT-100, '', { font: '16px Courier', fill: '#00ff00' });
+    debugText = this.add.text(WIDTH*0.85, HEIGHT*0.8, '', { font: '16px Courier', fill: '#00ff00' });
   }
    
   update(time) {
@@ -466,6 +445,7 @@ function checkMovement(){
 
   //If we are touching the Bottom of the screen, we can jump
   if((rat.body.blocked.down) && (this.cursors.up.isDown || (gamepad && gamepad.X))) {  //Check Bottom rat.y == HEIGHT-64
+    //rat.jump = true;  //in the same way than rat.fire = true;
     rat.setVelocityY(-400);
   }
 
@@ -495,9 +475,6 @@ function checkFire(time){
   //Better define a Fire Variable
 
   if (time > lastFired){
-    if((gamepad && gamepad.A) || this.keyFire.isDown){
-      rat.fire = true;
-    }
     if(rat.fire && !levelReady){
       rat.fire = false;
       var bullet = bullets.get(); //https://photonstorm.github.io/phaser3-docs/Phaser.GameObjects.Group.html#get__anchor
@@ -524,6 +501,36 @@ function setParticles(){
     //tint: soupTint,   //<--How To set afterwards
     on: false
   });
+}
+
+function startInputEvents(){
+  //https://photonstorm.github.io/phaser3-docs/Phaser.Input.InputPlugin.html#toc0__anchor
+  //Cursors
+  this.input.keyboard.on('keydown_SPACE', function (){ rat.fire = true; }, this );  //Better way to catch Fire
+
+  //Gamepad
+  this.input.gamepad.on('down', function (pad, button, index) { //catch every down key    
+    if (pad.getAxisTotal() >= 4) {
+      pad.setAxisThreshold(0.3);
+      gamepad = pad;
+      if(button.index == 0) { rat.fire = true; }  //if button = 'A' --> rat.fire = true; //better way to catch fire
+    }
+  }, this);
+
+  //Mouse
+  this.input.on('pointerdown', function (pointer) {
+    touchpoint = new Phaser.Math.Vector2(pointer.x, pointer.y);   //touchpoint.set(pointer.x, pointer.y);
+  }, this);
+
+  this.input.on('pointerup', function (pointer) {
+    rat.fire = true;
+  }, this);
+}
+
+function stopInputEvents(){
+  //When we don't want react to an input.
+  //this.input.off('gameobjectover', this.onIconOver);
+  this.input.removeAllListeners();
 }
 
 function setSounds(){
@@ -673,6 +680,7 @@ function setSounds(){
   }
 
   function launchIngredients(frames){
+    //this.time.delayedCall(delayItems, addIngredient, [], this); //this does the same?
 
     //We add every item after a delay
     for (var i = 0; i < numberScreenItems; i++) {
@@ -889,7 +897,7 @@ function setSounds(){
 
     //For debugging      
     lifeLeft = 5;
-    rightTopText.setText('Lifes x' + lifeLeft)
+    rightTopText.setText('Lifes x' + lifeLeft)  //we can add it as a tweens.addCounter --> onUpdate, setText
 
     createRecept.call(this);
     levelFrames = defineLevelFrames();

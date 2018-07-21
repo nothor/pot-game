@@ -1,8 +1,0 @@
-
-Install nodemon (globally)
-npm install -g nodemon
-
-Inside the Root Server folder (install locally)
-npm init -f
-npm install --save express
-npm install --save socket.io
