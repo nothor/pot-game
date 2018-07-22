@@ -24,13 +24,15 @@ var config = {
 var game = new Phaser.Game(config);
 
 //FUNCTIONS
-function setScreenSize(minWidth = 500, minHeight = 600, maxWidth = 1000){  
+function setScreenSize(minWidth = 500, minHeight = 600, maxWidth = 1000, maxHeight = 1000){  
     //Get the width/height of screen
     var w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
     var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
 
     if(h<minHeight)  //the minHeight should be 600 in order to be playable
         h = minHeight;
+    else if(h>maxHeight)
+        h = maxHeight;
     
     if(w<minWidth)
         w = minWidth;
