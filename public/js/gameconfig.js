@@ -1,5 +1,5 @@
 //For debugging  
-const DEBUG = true;
+const DEBUG = false;
 var debugText;  
 
 //Game
