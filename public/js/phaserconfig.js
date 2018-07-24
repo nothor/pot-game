@@ -8,6 +8,7 @@ var config = {
     pixelArt: true, //scale is NOT interpolated
     width: WIDTH,
     height: HEIGHT,
+    //backgroundColor: '#006060',
     input: {
       gamepad: true //Important to use the Gamepad!!
     },
@@ -18,7 +19,7 @@ var config = {
         gravity: { y: GRAVITY }
       }
     },
-    scene: [LoadScene, GameScene] //The order is Important to define the Z-Index!
+    scene: [LoadScene, MenuScene, GameScene] //The order is Important to define the Z-Index!
   };
    
 var game = new Phaser.Game(config);

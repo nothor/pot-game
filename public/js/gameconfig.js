@@ -1,5 +1,5 @@
 //For debugging  
-const DEBUG = false;
+const DEBUG = true;
 var debugText;  
 
 //Game
@@ -70,6 +70,6 @@ var rightItemFX;
 var completeFX;
 
 //Texts
-var rightTopText;
-var centerText;
+var rightTopText = {lifeText:null, lifeNumber:null};
+var centerText = {iniLevel:null, gameLevel:null, winLevel: null, lostLevel: null};  //Diferentes textos en esa posición
   

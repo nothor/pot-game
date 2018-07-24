@@ -76,7 +76,7 @@ class LoadScene extends Phaser.Scene {
       //ourGame.events.on('checkRecept', checkUpdateRecept, this);
 
       //We can add some kind of "Press Start"
-      this.scene.start('GameScene');      //Stops the current Scene and Starts the new
+      this.scene.start('MenuScene');      //Stops the current Scene and Starts the new
       //this.scene.launch('GameScene');    //Starts the new in Parallel.    
     }
 }

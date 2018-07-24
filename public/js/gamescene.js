@@ -80,6 +80,8 @@ class GameScene extends Phaser.Scene {
   }
 }
 
+//https://stackoverflow.com/questions/29514382/global-functions-in-javascript
+
 //================================== CREATE FUNCTIONS ==================================//
 /*
   CREATE GAME OBJECTS
@@ -95,10 +97,13 @@ function createGameInfo(){
   //Convert Recept to Images
   receptItems = this.add.group(); 
 
-  rightTopText = this.add.bitmapText(WIDTH-96, 16+10, 'gem', 'Press Fire');
-  rightTopText.setOrigin(0.5);
-  centerText = this.add.bitmapText(WIDTH/2, HEIGHT/2, 'gem', '');
-  centerText.setScale(2).setVisible(false); //.setOrigin(0.25, 0.5)
+  rightTopText.lifeText = this.add.bitmapText(WIDTH-96, 16+10, 'gem', 'Lifes x').setOrigin(0.5).setVisible(false);
+  rightTopText.lifeNumber = this.add.bitmapText(rightTopText.lifeText.x + rightTopText.lifeText.width/2, rightTopText.lifeText.y, 'gem', lifeLeft).setOrigin(0, 0.5).setVisible(false);
+
+  centerText.iniLevel = this.add.bitmapText(WIDTH/2, HEIGHT/2, 'gem', 'Recept #').setOrigin(0.5).setScale(2).setVisible(false);
+  centerText.gameLevel = this.add.bitmapText(centerText.iniLevel.x + centerText.iniLevel.width/2, centerText.iniLevel.y+centerText.iniLevel.height/2, 'gem', gameLevel).setOrigin(0, 0.5).setScale(2).setVisible(false);
+  centerText.winLevel = this.add.bitmapText(WIDTH/2, HEIGHT/2, 'gem', 'Recept Complete!').setOrigin(0.5).setScale(2).setVisible(false);
+  centerText.lostLevel = this.add.bitmapText(WIDTH/2, HEIGHT/2, 'gem', 'Game Over!').setOrigin(0.5).setScale(2).setVisible(false);
 
   //The recept is NOT created here...
 }
@@ -130,37 +135,42 @@ function createInGameObjects(){
   pot = this.physics.add.staticImage(WIDTH/2, HEIGHT, 'pot').setDepth(1);  //Not important the position
   this.add.image(WIDTH/2, HEIGHT, 'potFront').setDepth(3);
 
-  pot.setSize(pot.width*0.7, 50);
-  pot.setOffset(pot.width*0.15, 50); //0.15 = (1 - 0.5)/2 
-  //pot.setScale(1.5);  //Don't change the Body acordingly!!
+  //setObjectBody(pot, 1, 1, -1, -1);  //with this setting, is centered :(
+  pot.body.setSize(pot.width*0.7, 50);
+  pot.body.setOffset(pot.width*0.15, 50); //0.15 = (1 - 0.5)/2 
+  //pot.setScale(1.5);  //Do Scale always after setSize! Issue  #3824
 
   potSides = this.physics.add.staticGroup();
   potSides.create(((WIDTH-pot.body.width)/2)-20, HEIGHT-100, '') //left Side
   potSides.create(((WIDTH+pot.body.width)/2)+20, HEIGHT-100, '') //right Side
 
   potSides.children.iterate(function (child) {
-    child.setSize(child.width*0.6, 30);
-    child.setOffset(child.width*0.2, 0); //0.1 = (1 - 0.8)/2 
+    child.body.setSize(child.width*0.6, 30);
+    child.body.setOffset(child.width*0.2, 0); //0.1 = (1 - 0.8)/2 
     child.setVisible(false);  //para no verlo
   });
 
   water = this.add.sprite(WIDTH/2, pot.body.y+20, 'water').setDepth(2).setScale(0.75).setAlpha(0.8);
   
-  rat = this.physics.add.sprite(0, 0, 'rat', 14).setDepth(4).setScale(4);;  //Not important the position
+  rat = this.physics.add.sprite(WIDTH/2, HEIGHT/2, 'rat', 14).setDepth(4);  //Not important the position
+  setObjectBody(rat, 1/3, 1/3, 0, 1);  //adjust size of the body
+  rat.setScale(4);  //Do Scale always after setSize! Issue  #3824
+
   rat.setGravity(0, ratGravity);
-  rat.setPosition(WIDTH/2, HEIGHT/2); //HEIGHT-rat.body.height/2
-  setObjectBody(rat, 1/3);  //adjust size of the body
 }
 
-function setObjectBody(object, widthRatio = 2/3, heightRatio = widthRatio){
+function setObjectBody(object, widthRatio = 2/3, heightRatio = widthRatio, offX = 0, offY = offX){
   
-  var bodyW = Math.floor(object.width*widthRatio);
-  var bodyH = Math.floor(object.height*heightRatio);
-  var bodyOffX = Math.floor((object.width-bodyW)/2);
-  var bodyOffY = Math.floor((object.width-bodyH));  //0;
-  
-  object.setSize(bodyW, bodyH);  //Size of the Body
-  object.setOffset(bodyOffX,bodyOffY); //(frame-size)/2, frame-size - Pan
+  var bodyW = object.width*widthRatio;
+  var bodyH = object.height*heightRatio;
+
+  //Body by default centered on Sprite
+  var bodyOffX = (offX+1)*bodyW;  //0 = centered, 1 = right, -1 = left 
+  var bodyOffY = (offY+1)*bodyH;
+
+  //Do setScale always after setSize! Issue  #3824
+  object.body.setSize(bodyW, bodyH);  //Size of the Body
+  object.body.setOffset(bodyOffX,bodyOffY); 
 }
 
 /*
@@ -411,6 +421,7 @@ function checkUpdateRecept (item) {
   ===================
 */
 function checkMovement(){
+
   //Check Keyboard
   if (this.cursors.left.isDown) {
     rat.setVelocityX(-300);
@@ -556,7 +567,15 @@ function addIngredient(frame){
 }
 
 function launchIngredients(frames){
-  //this.time.delayedCall(delayItems, addIngredient, [], this); //this does the same?
+
+  /*
+  //With time Event <-- There is a Problem with this scope, we came from another function...
+  let i = 0;
+  this.time.addEvent({ delay: delayItems, callback: function() {
+    addIngredient(frames[i]);
+    i++;
+  }, callbackScope: this, repeat: numberScreenItems });
+  */
 
   //We add every item after a delay
   for (var i = 0; i < numberScreenItems; i++) {
@@ -620,8 +639,10 @@ function showRecept(){
   let showItemsTime = 1500;
   let spaceStepX = WIDTH/numberReceptItems;
   
-  centerText.setText('Recept #' + gameLevel);
-  centerText.setOrigin(0.25, 0.5).setVisible(true);
+  centerText.lostLevel.setVisible(false);
+  centerText.winLevel.setVisible(false);
+  centerText.iniLevel.setVisible(true); //BUG! When we change the Text the position also changes
+  centerText.gameLevel.setText(gameLevel).setVisible(true);
 
   this.tweens.add({
     //Bug depending on the WIDTH!!
@@ -633,7 +654,7 @@ function showRecept(){
     }, duration: showItemsTime, ease: 'Power2' },            //Power1, Power2, Bounce.easeOut
     y: { value: {
       getEnd: function (target, key, value){
-        return HEIGHT/4 - target.y;
+        return centerText.iniLevel.y/2 /*- target.y*/; 
       }
     }, duration: showItemsTime, ease: 'Power2' },
     scaleX: { value: scale, duration: showItemsTime, ease: 'Power2' },
@@ -643,7 +664,8 @@ function showRecept(){
     onComplete: function () {
       //setText 
       launchIngredients(ingredientsFrames); 
-      centerText.setVisible(false);
+      centerText.iniLevel.setVisible(false);
+      centerText.gameLevel.setVisible(false);
     }
   });
 }
@@ -693,7 +715,8 @@ function iniLevel(){
 
   //For debugging      
   lifeLeft = lifeIni;
-  rightTopText.setText('Lifes x' + lifeLeft)  //we can add it as a tweens.addCounter --> onUpdate, setText
+  rightTopText.lifeText.setVisible(true);
+  rightTopText.lifeNumber.setText(lifeLeft).setVisible(true);
 
   createRecept.call(this);
   ingredientsFrames = setIngredientsFrames();
@@ -715,7 +738,7 @@ function nextLevel(){
   //Animation
   animSlowDown.call(this, water.anims, 1000);    //<-- is this working?
 
-  centerText.setText('Recept Complete!').setVisible(true);
+  centerText.winLevel.setVisible(true);  //every Time we change text it changes position!
 
   //Depending on Recept, Tint different.
   water.setTint(Math.random() * (0xFFFFFF-soupTint) + soupTint);  //Random Tint
@@ -731,7 +754,7 @@ function gameOver(){
   soundSlowDown.call(this, musicSound, 2000)
   soundFadeOut.call(this, boilingFX, 2000)
 
-  rightTopText.setText('Game Over!');
+  centerText.lostLevel.setVisible(true);
   rat.setVelocityX(0);
   rat.anims.play('death', false);
 
@@ -768,10 +791,14 @@ function wrongItem(){
     lifeLeft = 0;
   }
   else{
-    rightTopText.setText('Lifes x' + lifeLeft)
-    highlightObject.call(this, rightTopText, 1.5);
-    rightTopText.setTint(0xff0000);  //tint red the score!
-    setTimeout(function() { rightTopText.clearTint();}, 200); //Clear Tint after 200ms
+    rightTopText.lifeNumber.setText(lifeLeft);
+    highlightObject.call(this, rightTopText.lifeNumber, 1.5);
+    rightTopText.lifeText.setTint(0xff0000);  //tint red the score!
+    rightTopText.lifeNumber.setTint(0xff0000);  //tint red the score!
+    setTimeout(function() { 
+      rightTopText.lifeText.clearTint();
+      rightTopText.lifeNumber.clearTint();
+    }, 200); //Clear Tint after 200ms
   }
 }
 
