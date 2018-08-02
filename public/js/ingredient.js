@@ -1,7 +1,7 @@
 
 var Ingredient = new Phaser.Class({
 
-    Extends: Phaser.Physics.Arcade.Sprite,
+    Extends: Phaser.Physics.Arcade.Sprite,  //new Sprite(scene, x, y, key [, frame])
   
     initialize: function (scene, x, y, key, frame)  //Executed when get() creates a new Element
     {

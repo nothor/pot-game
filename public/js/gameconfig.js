@@ -1,5 +1,6 @@
 //For debugging  
-const DEBUG = true;
+const DEBUG = false;
+const gridSize = 32;
 var debugText;  
 
 //Game

@@ -39,6 +39,7 @@ class GameScene extends Phaser.Scene {
     startInputEvents.call(this);
 
     //SET Listeners
+    rat.on('animationcomplete', animComplete, this) //Check Animations
     this.events.on('checkRecept', checkUpdateRecept, this); 
 
     //Debug
@@ -65,7 +66,15 @@ class GameScene extends Phaser.Scene {
       ]);
     }
 
-    rat.update(time); //this should be automatically called, something like runChildUpdate: true
+    if(lifeLeft > 0){
+      //Check Movement
+      checkMovement.call(this)
+      //Check Fire
+      checkFire.call(this, time);
+    }
+
+    //Update Animations
+    updateAnimation();
 
     //Check Next Level
     if(levelReady && rat.fire){
@@ -148,9 +157,11 @@ function createInGameObjects(){
 
   water = this.add.sprite(WIDTH/2, pot.body.y+20, 'water').setDepth(2).setScale(0.75).setAlpha(0.8);
   
-  rat = this.add.existing(new Player(this, WIDTH/2, HEIGHT/2, 'rat', 14, 4));
-  //runChildUpdate: true    //Execute during the update, the update function of the Childs
+  rat = this.physics.add.sprite(WIDTH/2, HEIGHT/2, 'rat', 14).setDepth(4);  //Not important the position
+  setObjectBody(rat, 1/3, 1/3, 0, 1);  //adjust size of the body
+  rat.setScale(4);  //Do Scale always after setSize! Issue  #3824
 
+  rat.setGravity(0, ratGravity);
 }
 
 function setObjectBody(object, widthRatio = 2/3, heightRatio = widthRatio, offX = 0, offY = offX){
@@ -177,7 +188,7 @@ function setColliders(){
   this.physics.add.collider(bullets, ingredients, hitItem, checkBulletVsItem, this);
   this.physics.add.overlap(pot, ingredients, hitWater, checkItem, this);
   
-  rat.setColliders();
+  rat.setCollideWorldBounds(true);
 }
 
 function hitItem (bullet, item)
@@ -255,7 +266,32 @@ function setAnimations(){
     repeat: -1  //tells the animation to loop
   }, this);
 
-  rat.setAnimations();
+  //COMMON ANIMATIONS
+  let keys = ['idle', 'gesture', 'walk', 'attack', 'death'];
+  let repeats = [-1, -1, -1, 0, 0];
+    
+  for(let i = 0; i < keys.length; i++){
+      this.anims.create({
+        key: keys[i],
+        frames: this.anims.generateFrameNumbers('rat', { start: 0+(i*10), end: 9+(i*10) }),
+        frameRate: 10,
+        repeat: repeats[i]
+      });
+  }
+
+  //Transition Animations
+  keys = ['standUp', 'idleUp', 'sitDown'];
+  let frames = [{start: 12, end: 13},{start: 14, end: 17},{start: 18, end: 19}]
+  repeats = [0,-1,0];
+    
+  for(let i = 0; i < keys.length; i++){
+      this.anims.create({
+        key: keys[i],
+        frames: this.anims.generateFrameNumbers('rat', { start: frames[i].start, end: frames[i].end }),
+        frameRate: 5,
+        repeat: repeats[i]
+      });
+  }
 }
 
 /*
@@ -338,6 +374,11 @@ function startInputEvents(){
   SET LISTENERS
   ===================
 */
+function animComplete (animation, frame){
+  //  Animation is over, let's fade the sprite out
+  //console.log('Anim: ' + animation.key);
+  rat.state = animation.key;
+}
 
 function checkUpdateRecept (item) {
   var badItem = true;
@@ -380,6 +421,111 @@ function checkUpdateRecept (item) {
 }
 
 //================================== UPDATE FUNCTIONS ==================================//
+/*
+  CHECK VALUES
+  ===================
+*/
+function checkMovement(){
+
+  //Check Keyboard
+  if (this.cursors.left.isDown) {
+    rat.setVelocityX(-300);
+  } else if (this.cursors.right.isDown){
+    rat.setVelocityX(300);
+  } else if (this.cursors.left.isUp || this.cursors.right.isUp) {
+    rat.setVelocityX(0);
+  }
+
+  //If we are touching the Bottom of the screen, we can jump
+  if((rat.body.blocked.down) && (this.cursors.up.isDown || (gamepad && gamepad.X))) {  //Check Bottom rat.y == HEIGHT-64
+    //rat.jump = true;  //in the same way than rat.fire = true;
+    rat.setVelocityY(-400);
+  }
+
+  //Check Gamepad
+  //Hasta que no pulse el gamepad NO empezamos con el ciclo Update!
+  if (gamepad) { 
+    rat.setVelocityX(300 * gamepad.leftStick.x);
+    rat.setAngularVelocity(300 * gamepad.rightStick.x);   //We can change the Angle! :)
+  }
+
+  //Check Touchpoint  --> Still to debug
+  if(touchpoint) {
+    if(rat.x < (touchpoint.x - rat.width/8)){ //Move to the Right
+      rat.setVelocityX(300);
+      rat.fire = false;
+    } else if(rat.x > (touchpoint.x + rat.width/8)){ //Move to the Left
+      rat.setVelocityX(-300);
+      rat.fire = false;     //If we are moving, we consider we didn't want to fire
+    } else{
+      rat.setVelocityX(0);
+      //nothing to do
+    }
+  }
+}
+
+function checkFire(time){
+  //Better define a Fire Variable
+
+  if (time > lastFired){
+    if(rat.fire && !levelReady){
+      rat.fire = false;
+      var bullet = bullets.get(); //https://photonstorm.github.io/phaser3-docs/Phaser.GameObjects.Group.html#get__anchor
+      if (bullet){
+          swingHighFX.play();
+          bullet.fire(rat);
+          lastFired = time + delayFire;
+      }
+    }
+  }
+}
+/*
+  UPDATE ANIMATIONS
+  ===================
+*/
+function updateAnimation(){
+  //https://labs.phaser.io/index.html?dir=animation/&q=
+
+  //play(key [, ignoreIfPlaying] [, startFrame])
+  if(lifeLeft <= 0){
+    //We should add also play('death')
+    return;
+  }
+
+  if(rat.body.velocity.x == 0 && rat.body.velocity.y == 0){ //added .y when we jump
+    //If don't walk
+    switch(rat.state) {
+      case 'walk':
+        rat.anims.play('standUp', false);
+        break;
+      case 'standUp':
+        rat.anims.play('idleUp', true);
+        break;
+      default:
+        rat.anims.play('idleUp', true);
+    } 
+  } 
+  else {
+    //If walk
+    switch(rat.state) {
+      case 'idleUp':
+        rat.anims.play('sitDown', false);
+        break;
+      case 'sitDown':
+        rat.anims.play('walk', true);
+        break;
+      default:
+        rat.anims.play('walk', true);
+    } 
+  }
+
+  //Flip Frame if necessary
+  if(rat.body.velocity.x > 0){
+    rat.flipX = true;
+  } else if(rat.body.velocity.x < 0) {  //We use it, in order to don't turn when 0
+    rat.flipX = false;
+  }
+}
 
 
 //================================== GAME HELPERS ==================================//
@@ -568,15 +714,15 @@ function iniLevel(){
   water.clearTint();
   
   //Ini Animations
+  rat.anims.play('standUp', true);
   water.anims.play('boilWater', true);
-
-  rat.iniLevel();
 
   //animSpeedUp.call(this, water.anims, 'boilWater', 2000)
 
   //For debugging      
+  lifeLeft = lifeIni;
   rightTopText.lifeText.setVisible(true);
-  rightTopText.lifeNumber.setText(rat.lifeLeft).setVisible(true);
+  rightTopText.lifeNumber.setText(lifeLeft).setVisible(true);
 
   createRecept.call(this);
   ingredientsFrames = setIngredientsFrames();
@@ -615,7 +761,8 @@ function gameOver(){
   soundFadeOut.call(this, boilingFX, 2000)
 
   centerText.lostLevel.setVisible(true);
-  rat.gameOver();
+  rat.setVelocityX(0);
+  rat.anims.play('death', false);
 
   //Reset Values
   gameLevel = 1;  //we set the numberScreenItems and numberReceptItems depending on it.
@@ -643,17 +790,22 @@ function wrongItem(){
 
   wrongItemFX.play();
   //Bad Item :(
-  if(rat.decreaseAndCheckLife())
+  lifeLeft -= 1;
+  if(lifeLeft == 0){    //To force Only 1 Time GameOver
     gameOver.call(this);
-  
-  rightTopText.lifeNumber.setText(rat.lifeLeft);
-  highlightObject.call(this, rightTopText.lifeNumber, 1.5);
-  rightTopText.lifeText.setTint(0xff0000);  //tint red the score!
-  rightTopText.lifeNumber.setTint(0xff0000);  //tint red the score!
-  setTimeout(function() { 
-    rightTopText.lifeText.clearTint();
-    rightTopText.lifeNumber.clearTint();
-  }, 200); //Clear Tint after 200ms
+  } else if(lifeLeft<0){
+    lifeLeft = 0;
+  }
+  else{
+    rightTopText.lifeNumber.setText(lifeLeft);
+    highlightObject.call(this, rightTopText.lifeNumber, 1.5);
+    rightTopText.lifeText.setTint(0xff0000);  //tint red the score!
+    rightTopText.lifeNumber.setTint(0xff0000);  //tint red the score!
+    setTimeout(function() { 
+      rightTopText.lifeText.clearTint();
+      rightTopText.lifeNumber.clearTint();
+    }, 200); //Clear Tint after 200ms
+  }
 }
 
 function highlightObject(objectToHighlight, scaleX = 2, scaleY = scaleX, duration = 200){
@@ -675,6 +827,23 @@ function highlightObject(objectToHighlight, scaleX = 2, scaleY = scaleX, duratio
 }
 
 //================================== GLOBAL HELPERS ==================================//
+
+/*
+  DEBUG
+  ===================
+*/
+function drawGrid(graphics) {
+  graphics.lineStyle(1, 0x0000ff, 0.8);
+  for(var i = 0; i < WIDTH/gridSize; i++) {
+    graphics.moveTo(i * gridSize, 0);
+    graphics.lineTo(i * gridSize, HEIGHT);
+  }
+  for(var j = 0; j < HEIGHT/gridSize; j++) {
+      graphics.moveTo(0, j * gridSize);
+      graphics.lineTo(WIDTH, j * gridSize);
+  }
+  graphics.strokePath().setDepth(5);
+}
 
 /*
   ANIMATIONS
@@ -785,23 +954,6 @@ function stopInputEvents(){
   //When we don't want react to an input.
   //this.input.off('gameobjectover', this.onIconOver);
   this.input.removeAllListeners();
-}
-
-/*
-  DEBUG
-  ===================
-*/
-function drawGrid(graphics) {
-  graphics.lineStyle(1, 0x808000, 0.8);
-  for(var i = 0; i < WIDTH/gridSize; i++) {
-    graphics.moveTo(i * gridSize, 0);
-    graphics.lineTo(i * gridSize, HEIGHT);
-  }
-  for(var j = 0; j < HEIGHT/gridSize; j++) {
-      graphics.moveTo(0, j * gridSize);
-      graphics.lineTo(WIDTH, j * gridSize);
-  }
-  graphics.strokePath().setDepth(5);
 }
 
 /*
